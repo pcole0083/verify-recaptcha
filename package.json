@@ -1,0 +1,27 @@
+{
+  "name": "messer-recaptcha",
+  "version": "0.0.1",
+  "description": "Lambda function to test the recaptcha v2 response",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "aws",
+    "recaptcha",
+    "lambda"
+  ],
+  "author": "Pat Coleman <pcole0083@gmail.com> (https://github.com/pcole0083/)",
+  "license": "MIT",
+  "dependencies": {
+    "request": "^2.88.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pcole0083/verify-recaptcha.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pcole0083/verify-recaptcha/issues"
+  },
+  "homepage": "https://github.com/pcole0083/verify-recaptcha#readme"
+}
