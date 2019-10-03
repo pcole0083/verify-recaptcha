@@ -2,20 +2,33 @@ const request = require('request');
 
 const SKEY = process.env.SKEY; //secret key provided by google recaptcha
 const API_URL = process.env.API_URL; //'https://www.google.com/recaptcha/api/siteverify'
+const corsWhitelist = process.env.WHITELISTEDORIGINS.split(','); //whitelist your event.header.origin(s)
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   //we always want to return 200 so that the requesting URL can have good feedback to work with
   let response = {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Methods": "POST"
+    },
     statusCode: 200,
   };
-  //send the event body to verify the recaptcha response
-  let validity = await checkRecaptcha(event.body); //body should be sent { recaptcha: CODE_RETURNED_FROM_BROWSER }
+  //check origin for CORs
+  if (event.headers && corsWhitelist.indexOf(event.headers.origin) !== -1) {
+    response.headers['Access-Control-Allow-Origin'] = event.headers.origin;
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept';
 
-  if (validity.errors && validity.errors.length) {
-    response.body = JSON.stringify(validity.errors); //respond with errors
-  } else {
-    response.body = JSON.stringify(validity.success); //respond with success
+    //send the event body to verify the recaptcha response
+    let validity = !!event.body ? await checkRecaptcha(JSON.parse(event.body)) : {
+      errors: ['There was an issue with response sent, please try again.']
+    }; //body should be sent { recaptcha: CODE_RETURNED_FROM_BROWSER }
+
+    response.body = JSON.stringify(validity); //pass the recaptcha response back to requester
   }
+  else {
+    response.statusCode = 400;
+  }
+
   return response;
 };
 
@@ -24,6 +37,7 @@ function checkRecaptcha(f) {
   return new Promise((resolve, reject) => {
     //collect errors here
     let errors = [];
+
     //send the post request
     request.post(API_URL, {
       form: {
@@ -38,17 +52,17 @@ function checkRecaptcha(f) {
           errors: errors,
           success: false
         });
-      }
-      else {
+      } else {
         //parse the response body
         let jsonRes = JSON.parse(body);
 
-        if (!jsonRes.success) { //failure
-          errors.push('You did not fill out the recaptcha or resubmitted the form.');
+        if (!jsonRes.success || (!!jsonRes['error-codes'] && jsonRes['error-codes'].length > 0)) { //failure
+          errors.push('There was an issue with response sent, please try again.');
+          errors.concat(jsonRes['error-codes']);
         }
         //return any errors and the success status
         resolve({
-          errors: errors,
+          errors: jsonRes['error-codes'],
           success: jsonRes.success
         });
       }
